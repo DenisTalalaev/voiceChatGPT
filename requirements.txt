@@ -1,0 +1,4 @@
+aiogram
+openai
+pydantic-settings
+python-dotenv
