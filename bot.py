@@ -1,7 +1,7 @@
 import logging
 import os
 import openai
-from openai import OpenAI
+from openai import AsyncClient
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import *
 from aiogram.filters import Command
@@ -13,13 +13,11 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=settings.telegram_token)
 dp = Dispatcher()
 
-openai.api_key = settings.openai_api_key
-
-client = OpenAI(api_key=settings.openai_api_key)
+async_client = AsyncClient(api_key=settings.openai_api_key)
 
 async def transcribe_voice(file_path):
     with open(file_path, "rb") as audio_file:
-        transcript = client.audio.transcriptions.create(
+        transcript = await async_client.audio.transcriptions.create(
             model="whisper-1",
             file=audio_file,
             response_format="json"
@@ -28,33 +26,33 @@ async def transcribe_voice(file_path):
 
 async def generate_response(text):
     try:
-        assistant = client.beta.assistants.create(
+        assistant = await async_client.beta.assistants.create(
             name="Assistant",
             instructions="Ответь кратко и понятно",
             model="gpt-4-1106-preview"
         )
 
-        thread = client.beta.threads.create()
+        thread = await async_client.beta.threads.create()
 
-        client.beta.threads.messages.create(
+        await async_client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
             content=text
         )
 
-        run = client.beta.threads.runs.create(
+        run = await async_client.beta.threads.runs.create(
             thread_id=thread.id,
             assistant_id=assistant.id
         )
 
         while run.status in ["queued", "in_progress"]:
-            run = client.beta.threads.runs.retrieve(
+            run = await async_client.beta.threads.runs.retrieve(
                 thread_id=thread.id,
                 run_id=run.id
             )
             await asyncio.sleep(0.5)
 
-        messages = client.beta.threads.messages.list(thread_id=thread.id)
+        messages = await async_client.beta.threads.messages.list(thread_id=thread.id)
 
         assistant_response = None
         for message in messages.data:
@@ -69,7 +67,7 @@ async def generate_response(text):
         return "Failed to generate a response. Please try again later."
 
 async def synthesize_speech(text, file_path):
-    response = client.audio.speech.create(
+    response = await async_client.audio.speech.create(
         model="tts-1",
         voice="alloy",
         input=text
@@ -88,6 +86,7 @@ async def handle_voice_message(message: types.Message):
     file_path = f"downloads/{voice.file_id}.ogg"
 
     try:
+        # Загрузка голосового сообщения с помощью aiogram
         file = await bot.get_file(voice.file_id)
         await bot.download_file(file.file_path, file_path)
 
