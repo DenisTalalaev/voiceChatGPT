@@ -19,9 +19,9 @@ dp = Dispatcher()
 # Настройка OpenAI API
 openai.api_key = settings.openai_api_key
 
+client = OpenAI(api_key=settings.openai_api_key)
 
 async def transcribe_voice(file_path):
-    client = OpenAI(api_key=settings.openai_api_key)
     audio_file = open(file_path, "rb")
     transcript = client.audio.transcriptions.create(
         model="whisper-1",
@@ -33,9 +33,6 @@ async def transcribe_voice(file_path):
 
 async def generate_response(text):
     try:
-        client = OpenAI(
-            api_key=settings.openai_api_key
-        )
         chat_completion = client.chat.completions.create(
             messages=[
                 {
@@ -51,7 +48,6 @@ async def generate_response(text):
 
 
 async def synthesize_speech(text, file_path):
-    client = OpenAI(api_key=settings.openai_api_key)
 
     response = client.audio.speech.create(
         model="tts-1",
